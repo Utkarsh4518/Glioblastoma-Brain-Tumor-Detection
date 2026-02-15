@@ -1,0 +1,38 @@
+# BraTS 2020 - Segmentation & Classification Pipeline
+# Override from CLI: python train.py model=lrunet seed=42
+
+defaults:
+  - _self_
+  - data: nifti
+
+# Experiment
+experiment_name: brats2020_default
+seed: 42
+
+# Paths
+paths:
+  data_root: ${oc.env:DATA_ROOT,./data/brats2020}
+  output_dir: ./outputs
+  checkpoint_dir: ./checkpoints
+
+# Model
+model:
+  name: unet  # unet (3D), unet_2d (2D slice), swin_unetr (3D) | efficientnet_b0, resnet18 (classification)
+  backbone: null  # for classification only
+  in_channels: 4   # must match dataset (use get_segmentation_channels_from_dataset)
+  out_channels: 4  # BraTS: bg, NCR, ED, ET
+  spatial_dims: 3  # 2 for unet_2d / slice-based, 3 for volume
+
+# Training - LR=1e-4, batch_size=2-4 for 3D
+training:
+  device: auto  # options: auto, cpu, cuda
+  max_epochs: 100
+  learning_rate: 0.0001
+  weight_decay: 0.0001
+  val_interval: 1
+  ckpt_interval: 10
+  scheduler: cosine  # cosine | plateau
+  early_stopping_patience: 15
+
+# Task: segmentation | classification
+task: segmentation
