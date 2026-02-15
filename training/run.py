@@ -14,8 +14,8 @@ from omegaconf import DictConfig
 from data import build_dataset
 from data.dataset import BraTS2020ClassificationDataset
 from data.transforms import get_train_transforms_2d
+from models.build_model import build_model
 from models.segmentation import (
-    get_model as get_seg_model,
     get_segmentation_channels_from_dataset,
     print_model_summary,
 )
@@ -112,23 +112,14 @@ def run_training(cfg: DictConfig) -> dict:
             )
 
         in_channels, out_channels = get_segmentation_channels_from_dataset(train_ds)
-        if data_mode == "h5":
-            model = get_seg_model(
-                name=model_cfg.get("name", "unet_2d"),
-                in_channels=in_channels,
-                out_channels=out_channels,
-                img_size=(128, 128),
-                dropout=model_cfg.get("dropout", 0.2),
-            )
-            print_model_summary(model, in_channels=in_channels, out_channels=out_channels, spatial_dims=2)
-        else:
-            model = get_seg_model(
-                name=model_cfg.get("name", "unet"),
-                in_channels=in_channels,
-                out_channels=out_channels,
-                img_size=roi_size,
-                dropout=model_cfg.get("dropout", 0.2),
-            )
+        model = build_model(cfg, in_channels=in_channels, out_channels=out_channels)
+        spatial_dims = 2 if data_mode == "h5" else 3
+        print_model_summary(
+            model,
+            in_channels=in_channels,
+            out_channels=out_channels,
+            spatial_dims=spatial_dims,
+        )
         loss_fn = get_dice_ce_loss(num_classes=4)
         num_classes = 4
     else:
