@@ -316,6 +316,68 @@ python -m training.train_survival --features_csv outputs/survival_features.csv
 python train.py experiment_name=my_run seed=42 training.max_epochs=50 data.batch_size=4
 ```
 
+### Device and CPU fallback
+
+Training uses the device set in config: `training.device` can be `auto`, `cpu`, or `cuda`.
+
+- **`auto`** (default): use CUDA if available, otherwise CPU.
+- **`cuda`**: use GPU; if no GPU is available, a warning is logged and CPU is used.
+- **`cpu`**: force CPU (no CUDA). Use for debugging or machines without a GPU.
+
+**CPU fallback:** To run entirely on CPU (e.g. no GPU or to avoid CUDA), set `training.device=cpu` and use `data.num_workers=0` to avoid multiprocessing issues:
+
+```bash
+python train.py training.device=cpu data.num_workers=0 training.max_epochs=1
+```
+
+Training will be slower on CPU; reduce `training.max_epochs` or `data.batch_size` for quick checks.
+
+### Running in 2D mode
+
+2D mode uses **slice-based HDF5 data** (e.g. Kaggle `volume_*.h5`). The pipeline builds a 2D UNet and applies 2D augmentations.
+
+1. Set your HDF5 data path (e.g. `DATA_ROOT` or override in config).
+2. Run segmentation with `data=h5`:
+
+```bash
+# Windows
+set DATA_ROOT=C:\path\to\h5_brats
+python train.py data=h5 task=segmentation
+
+# Linux/macOS
+export DATA_ROOT=/path/to/h5_brats
+python train.py data=h5 task=segmentation
+```
+
+3. Optional: validate the 2D pipeline with one forward pass (no data required if path is missing):
+
+```bash
+python tools/test_modes.py
+```
+
+### Running in 3D mode
+
+3D mode uses **NIfTI volumes** (BraTS 2020 directory layout: `patient_id/patient_id_{t1,t1ce,t2,flair,seg}.nii.gz`). The pipeline builds a 3D UNet and applies 3D augmentations.
+
+1. Download BraTS 2020 data and set `DATA_ROOT` to the training data directory.
+2. Run segmentation with the default data config (nifti):
+
+```bash
+# Windows
+set DATA_ROOT=C:\path\to\BraTS2020_TrainingData
+python train.py task=segmentation
+
+# Linux/macOS
+export DATA_ROOT=/path/to/BraTS2020_TrainingData
+python train.py task=segmentation
+```
+
+3. Optional: validate the 3D pipeline:
+
+```bash
+python tools/test_modes.py
+```
+
 ---
 
 ## Evaluation

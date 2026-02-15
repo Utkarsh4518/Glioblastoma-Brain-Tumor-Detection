@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.venv/
+.conda/
+venv/
+env/
+.Python
+*.egg-info/
+dist/
+build/
+
+# Data (large files)
+data/brats2020/*/
+!data/brats2020/.gitkeep
+
+# Outputs and checkpoints
+outputs/
+checkpoints/
+*.pt
+*.pth
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Logs
+*.log
+runs/
