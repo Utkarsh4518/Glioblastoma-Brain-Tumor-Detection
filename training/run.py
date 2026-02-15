@@ -11,8 +11,8 @@ import torch
 from torch.utils.data import DataLoader, random_split
 from omegaconf import DictConfig
 
-from data.dataset import BraTS2020Dataset, BraTS2020ClassificationDataset
-from data.h5_brats_dataset import H5BraTSDataset
+from data import build_dataset
+from data.dataset import BraTS2020ClassificationDataset
 from data.transforms import get_train_transforms_2d
 from models.segmentation import (
     get_model as get_seg_model,
@@ -82,36 +82,37 @@ def run_training(cfg: DictConfig) -> dict:
     task = cfg.get("task", "segmentation")
 
     if task == "segmentation":
+        train_ds = build_dataset(cfg, "train")
+        val_ds = build_dataset(cfg, "val")
+
         if data_mode == "h5":
-            # H5 slice-based: H5BraTSDataset, 2D transforms only, no 3D augmentations
             train_transform_2d = _wrap_dict_transform_2d(
                 get_train_transforms_2d(keys=["image", "mask"], label_key="mask")
             )
-            dataset = H5BraTSDataset(
-                data_root=data_root,
-                pattern=data_cfg.get("pattern", "volume_*.h5"),
-                image_key=data_cfg.get("image_key") or None,
-                mask_key=data_cfg.get("mask_key") or None,
-                transform=None,
-            )
-            n = len(dataset)
-            n_train = int(n * train_val_split)
-            n_val = n - n_train
-            gen = torch.Generator().manual_seed(cfg.get("seed", 42))
-            train_subset, val_subset = random_split(dataset, [n_train, n_val], generator=gen)
 
             class _TrainWithTransform(torch.utils.data.Dataset):
                 """Applies 2D augmentations only to train samples."""
-                def __len__(self):
-                    return len(train_subset)
-                def __getitem__(self, idx):
-                    out = dataset[train_subset.indices[idx]]
-                    img, msk = train_transform_2d(out["image"], out["mask"])
-                    return {"image": img, "mask": msk}
-            train_ds = _TrainWithTransform()
-            val_ds = val_subset
+                def __init__(self, underlying_dataset, indices, transform_fn):
+                    self._dataset = underlying_dataset
+                    self._indices = indices
+                    self._transform_fn = transform_fn
 
-            in_channels, out_channels = get_segmentation_channels_from_dataset(dataset)
+                def __len__(self):
+                    return len(self._indices)
+
+                def __getitem__(self, idx):
+                    out = self._dataset[self._indices[idx]]
+                    img, msk = self._transform_fn(out["image"], out["mask"])
+                    return {"image": img, "mask": msk}
+
+            train_ds = _TrainWithTransform(
+                train_ds.dataset,
+                train_ds.indices,
+                train_transform_2d,
+            )
+
+        in_channels, out_channels = get_segmentation_channels_from_dataset(train_ds)
+        if data_mode == "h5":
             model = get_seg_model(
                 name=model_cfg.get("name", "unet_2d"),
                 in_channels=in_channels,
@@ -121,21 +122,10 @@ def run_training(cfg: DictConfig) -> dict:
             )
             print_model_summary(model, in_channels=in_channels, out_channels=out_channels, spatial_dims=2)
         else:
-            dataset = BraTS2020Dataset(
-                root=data_root,
-                mode="3d",
-                patch_size=roi_size,
-            )
-            n = len(dataset)
-            n_train = int(n * train_val_split)
-            n_val = n - n_train
-            gen = torch.Generator().manual_seed(cfg.get("seed", 42))
-            train_ds, val_ds = random_split(dataset, [n_train, n_val], generator=gen)
-
             model = get_seg_model(
                 name=model_cfg.get("name", "unet"),
-                in_channels=model_cfg.get("in_channels", 4),
-                out_channels=model_cfg.get("out_channels", 4),
+                in_channels=in_channels,
+                out_channels=out_channels,
                 img_size=roi_size,
                 dropout=model_cfg.get("dropout", 0.2),
             )
