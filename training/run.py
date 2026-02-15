@@ -13,7 +13,6 @@ from omegaconf import DictConfig
 
 from data import build_dataset
 from data.dataset import BraTS2020ClassificationDataset
-from data.transforms import get_train_transforms_2d
 from models.build_model import build_model
 from models.segmentation import (
     get_segmentation_channels_from_dataset,
@@ -21,6 +20,7 @@ from models.segmentation import (
 )
 from models.classification import get_classifier
 from models.loss import get_dice_ce_loss, get_bce_with_logits_loss
+from training.transforms import build_transforms
 from training.training import Trainer
 from utils.seed import set_seed
 
@@ -38,14 +38,6 @@ def _get_device(device_str: str) -> torch.device:
         return torch.device("cpu")
     # auto
     return torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-
-def _wrap_dict_transform_2d(compose):
-    """Adapt MONAI dict-based Compose to (image, mask) -> (image, mask) for H5BraTSDataset."""
-    def transform(image, mask):
-        out = compose({"image": image, "mask": mask})
-        return out["image"], out["mask"]
-    return transform
 
 
 def run_training(cfg: DictConfig) -> dict:
@@ -85,13 +77,10 @@ def run_training(cfg: DictConfig) -> dict:
         train_ds = build_dataset(cfg, "train")
         val_ds = build_dataset(cfg, "val")
 
-        if data_mode == "h5":
-            train_transform_2d = _wrap_dict_transform_2d(
-                get_train_transforms_2d(keys=["image", "mask"], label_key="mask")
-            )
-
+        train_transform = build_transforms(cfg, "train")
+        if train_transform is not None:
             class _TrainWithTransform(torch.utils.data.Dataset):
-                """Applies 2D augmentations only to train samples."""
+                """Applies train augmentations (2D or 3D by data.mode)."""
                 def __init__(self, underlying_dataset, indices, transform_fn):
                     self._dataset = underlying_dataset
                     self._indices = indices
@@ -105,10 +94,16 @@ def run_training(cfg: DictConfig) -> dict:
                     img, msk = self._transform_fn(out["image"], out["mask"])
                     return {"image": img, "mask": msk}
 
+            def _dict_transform(compose):
+                def fn(image, mask):
+                    out = compose({"image": image, "mask": mask})
+                    return out["image"], out["mask"]
+                return fn
+
             train_ds = _TrainWithTransform(
                 train_ds.dataset,
                 train_ds.indices,
-                train_transform_2d,
+                _dict_transform(train_transform),
             )
 
         in_channels, out_channels = get_segmentation_channels_from_dataset(train_ds)
