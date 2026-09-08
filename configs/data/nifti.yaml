@@ -1,0 +1,7 @@
+# 3D NIfTI volumes (official BraTS2020 layout: subject_id/subject_id_{t1,t1ce,t2,flair,seg}.nii[.gz])
+mode: nifti
+roi_size: [128, 128, 128]
+batch_size: 2
+num_workers: 4
+train_val_split: 0.85
+grade_filter: null  # HGG (glioblastoma), LGG, or null (all grades); needs name_mapping.csv

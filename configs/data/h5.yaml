@@ -1,0 +1,9 @@
+# 2D slice-based HDF5 data (e.g. Kaggle BraTS2020 slice mirrors)
+mode: h5
+path: ${oc.env:DATA_ROOT,./data/h5_brats}
+pattern: "volume_*.h5"
+image_key: null
+mask_key: null
+batch_size: 16
+num_workers: 4
+train_val_split: 0.85
