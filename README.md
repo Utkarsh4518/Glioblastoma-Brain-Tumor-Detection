@@ -1,6 +1,8 @@
-# BraTS 2020: Brain Tumor Segmentation, Classification & Survival Prediction
+# Glioblastoma Brain Tumor Segmentation — BraTS 2020 (3D U-Net)
 
-PyTorch pipeline for BraTS 2020–style brain tumor segmentation and classification. Supports 3D NIfTI volumes and 2D slice-based HDF5 data. Built with MONAI and Hydra.
+PyTorch pipeline for segmenting glioblastoma sub-regions in multi-parametric brain MRI (BraTS 2020). A 3D U-Net maps the four MRI modalities (T1, T1Gd, T2, FLAIR) to a four-class voxel segmentation (background, necrotic/non-enhancing core, edema, enhancing tumor). The repo also includes 2D slice-based (HDF5) support and a binary tumor classifier. Built with MONAI and Hydra.
+
+The full write-up is in [`report/main.pdf`](report/main.pdf) (LaTeX source under `report/`).
 
 ## Features
 
@@ -13,7 +15,11 @@ PyTorch pipeline for BraTS 2020–style brain tumor segmentation and classificat
 
 - **3D NIfTI segmentation** is the primary, exercised path: official BraTS2020 layout, 4-class UNet, Dice+CE loss, Dice metric.
 - **2D HDF5 segmentation** and the **classification** task are implemented but assume a specific slice/mask key layout (see `data/h5_brats_dataset.py`) that may need adjusting to whichever Kaggle mirror you use.
-- No survival-prediction or uncertainty-quantification module exists yet, despite earlier drafts of this README describing one.
+- No survival-prediction or uncertainty-quantification module exists yet.
+
+## Results
+
+On the 44-subject high-grade-glioma (glioblastoma) validation split, the 3D U-Net reaches a **foreground mean Dice of 0.71** (edema 0.77, enhancing tumor 0.73, necrotic/non-enhancing core 0.61; mean HD95 9.1 mm), with validation Dice plateauing by ~epoch 20. See [`report/main.pdf`](report/main.pdf) for the full method, figures, and discussion.
 
 ## Installation
 
