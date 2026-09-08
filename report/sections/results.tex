@@ -1,0 +1,94 @@
+\chapter{Experiments and Results}
+\label{ch:results}
+
+\section{Experimental setup}
+
+All results below are produced by the pipeline described in
+Chapter~\ref{ch:method}: a 3D~U-Net trained on the 249 high-grade-glioma training
+subjects and evaluated on the 44 held-out validation subjects, with the four MRI
+modalities as input and the four-class segmentation as output. Metrics are
+computed on the validation split using the best checkpoint, which was obtained at
+epoch~34; as Figure~\ref{fig:curves} shows, the validation mean Dice had
+plateaued by that point, so this checkpoint is representative of the model's
+converged performance for this configuration.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.9\textwidth]{sample_data.png}
+\caption{A representative training subject: the four input modalities
+(T1, T1Gd, T2, FLAIR) and the expert segmentation overlaid on FLAIR. The mask
+distinguishes the necrotic/non-enhancing core, peritumoral edema and enhancing
+tumour. The four modalities carry complementary information, which motivates using
+all of them as input.}
+\label{fig:sample}
+\end{figure}
+
+\section{Training behaviour}
+
+Figure~\ref{fig:curves} shows the training and validation loss together with the
+validation mean Dice over the course of training. The loss decreases smoothly for
+both splits and the validation Dice rises and then plateaus, at which point early
+stopping selects the best checkpoint. The small gap between training and
+validation loss indicates that the light augmentation and dropout keep
+overfitting under control on this modestly sized dataset.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.95\textwidth]{training_curves.png}
+\caption{Training dynamics. Left: training and validation loss per epoch.
+Right: validation mean Dice per epoch. The validation Dice rises steeply over the
+first ten epochs and plateaus around 0.77 by epoch~20; the small, stable gap
+between training and validation loss indicates limited overfitting.}
+\label{fig:curves}
+\end{figure}
+
+\section{Quantitative results}
+
+Table~\ref{tab:results} reports the Dice similarity coefficient and the
+95th-percentile Hausdorff distance for each tumour sub-region on the validation
+split, together with the foreground mean. Dice is reported in $[0,1]$ (higher is
+better) and HD95 in millimetres (lower is better). The model reaches a foreground
+mean Dice of 0.71 with a mean HD95 of 9.1~mm. Peritumoral edema and enhancing
+tumour are segmented most accurately (Dice 0.77 and 0.73), while the
+necrotic/non-enhancing core is the hardest sub-region (Dice 0.61), consistent with
+its small size and ambiguous, enhancement-defined boundary. These figures sit in
+the expected range for a compact single-GPU 3D~U-Net on BraTS.
+
+\begin{table}[t]
+\centering
+\caption{Segmentation performance on the 44-subject HGG validation split,
+using the best checkpoint (epoch~34). Dice higher is better; HD95 lower is better.}
+\label{tab:results}
+\begin{tabular}{@{}lcc@{}}
+\toprule
+Sub-region & Dice $\uparrow$ & HD95 (mm) $\downarrow$ \\
+\midrule
+Necrotic / non-enhancing core (NCR/NET) & 0.614 & 8.7 \\
+Peritumoral edema (ED)                  & 0.767 & 12.0 \\
+Enhancing tumour (ET)                   & 0.735 & 6.4 \\
+\midrule
+Foreground mean                         & 0.705 & 9.1 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Qualitative results}
+
+Figure~\ref{fig:overlay} compares the model's prediction with the ground truth on
+a validation case, both overlaid on the FLAIR image. On this subject the
+prediction matches the ground truth closely across all three sub-regions: the
+enhancing tumour (blue), the necrotic/non-enhancing core (red) and the surrounding
+edema (green) are each recovered with good spatial agreement. Across the full
+validation set the model is most reliable on the edema and enhancing tumour and
+weakest on the small, ambiguous necrotic core, consistent with
+Table~\ref{tab:results}.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.95\textwidth]{overlay.png}
+\caption{Qualitative segmentation on a validation subject: input MRI (FLAIR),
+ground-truth mask and model prediction (green: edema, red: necrotic/non-enhancing
+core, blue: enhancing tumour). The prediction matches the ground truth closely
+across all three sub-regions.}
+\label{fig:overlay}
+\end{figure}

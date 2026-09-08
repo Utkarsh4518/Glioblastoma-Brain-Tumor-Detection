@@ -1,0 +1,153 @@
+\chapter{Methodology}
+\label{ch:method}
+
+This chapter describes the dataset, the pre-processing, the network architecture,
+the training objective and the evaluation protocol. The complete pipeline is
+implemented in PyTorch \citep{paszke2019pytorch} using the MONAI medical-imaging
+library \citep{cardoso2022monai}, and every experiment is driven from a single
+configurable entry point with a fixed random seed.
+
+\section{Dataset}
+\label{sec:data}
+
+We use the BraTS~2020 training dataset \citep{menze2015brats,bakas2017advancing},
+which contains 369 subjects. Each subject provides four co-registered MRI
+modalities --- native T1, contrast-enhanced T1 (T1Gd), T2 and T2-FLAIR --- together
+with an expert segmentation. All volumes are skull-stripped, rigidly registered to
+a common anatomical template and resampled to $1\,\mathrm{mm}^3$ isotropic
+resolution, giving a spatial size of $240\times240\times155$ voxels per modality.
+
+Each subject is labelled by grade in the dataset's metadata. Of the 369 subjects,
+293 are high-grade glioma (HGG, i.e.\ glioblastoma) and 76 are lower-grade glioma
+(LGG). Because this project concerns glioblastoma specifically, we filter the
+dataset to the \textbf{293 HGG subjects} and use only these for training and
+evaluation. This keeps the clinical framing of the study accurate.
+
+The ground-truth annotation assigns each voxel one of four classes. The raw BraTS
+labels are $\{0,1,2,4\}$; following common practice we remap the enhancing-tumour
+label $4\rightarrow 3$ so that the classes are contiguous:
+
+\begin{table}[h]
+\centering
+\caption{Segmentation classes used in this work (after label remapping).}
+\label{tab:classes}
+\begin{tabular}{@{}clc@{}}
+\toprule
+Index & Region & Raw BraTS label \\
+\midrule
+0 & Background / healthy tissue & 0 \\
+1 & Necrotic and non-enhancing tumour core (NCR/NET) & 1 \\
+2 & Peritumoral edema (ED) & 2 \\
+3 & Enhancing tumour (ET) & 4 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The 293 subjects are split into training and validation sets in an 85:15 ratio
+using a fixed random generator (seed 42), giving 249 training and 44 validation
+subjects. The split is deterministic so that results are reproducible.
+
+\section{Pre-processing and augmentation}
+\label{sec:preproc}
+
+MRI intensities are not calibrated in absolute units and vary between scanners, so
+each modality of each subject is independently \emph{z-score normalised} to zero
+mean and unit variance over the brain volume:
+\begin{equation}
+\hat{x}_{c} = \frac{x_{c} - \mu_{c}}{\sigma_{c}},
+\end{equation}
+where $x_c$ is the intensity of channel (modality) $c$ and $\mu_c,\sigma_c$ are its
+mean and standard deviation. The four normalised modalities are stacked into a
+single input tensor of shape $4\times D\times H\times W$.
+
+Because a full $240\times240\times155$ volume with a deep 3D network exceeds the
+memory of a single consumer GPU, each volume is cropped to a fixed patch of
+$128\times128\times128$ voxels centred on the brain. During training only, we
+apply light on-the-fly data augmentation to improve generalisation: random flips
+along each spatial axis and random $90^{\circ}$ rotations in the axial plane, each
+applied with probability $0.5$. A final pad-or-crop step guarantees that every
+augmented sample retains the exact patch size so that samples can be batched. No
+augmentation is applied at validation time.
+
+\section{Network architecture}
+\label{sec:arch}
+
+The segmentation network is a three-dimensional U-Net
+\citep{ronneberger2015unet,cicek20163dunet}. It follows the standard
+encoder--decoder design: the encoder progressively downsamples the input while
+increasing the number of feature channels through the sequence
+$(32, 64, 128, 256, 512)$, using strided convolutions with a stride of two at each
+of the four downsampling stages; the decoder mirrors this path, upsampling back to
+the input resolution. Skip connections concatenate encoder features with the
+corresponding decoder features at each resolution, allowing the network to combine
+high-level semantic context with fine spatial detail. Each stage uses residual
+convolutional units with batch normalisation and a dropout rate of $0.2$ for
+regularisation. The network takes the four-channel input volume and outputs four
+per-voxel class logits. In this configuration the model has approximately
+19.2 million trainable parameters.
+
+\section{Training objective}
+\label{sec:loss}
+
+Brain tumour segmentation is highly class-imbalanced: the tumour sub-regions
+occupy a small fraction of the volume relative to background. We therefore combine
+a region-overlap loss with a per-voxel classification loss, using the sum of the
+soft Dice loss and cross-entropy \citep{milletari2016vnet,sudre2017generalised}.
+For a class $k$, let $p_{i,k}\in[0,1]$ be the predicted (softmax) probability at
+voxel $i$ and $g_{i,k}\in\{0,1\}$ the one-hot ground truth. The soft Dice loss
+averaged over the $K$ classes is
+\begin{equation}
+\mathcal{L}_{\mathrm{Dice}} = 1 - \frac{1}{K}\sum_{k=1}^{K}
+\frac{2\sum_{i} p_{i,k}\,g_{i,k} + \epsilon}
+     {\sum_{i} p_{i,k} + \sum_{i} g_{i,k} + \epsilon},
+\end{equation}
+where $\epsilon$ is a small constant that avoids division by zero. The
+cross-entropy term is
+\begin{equation}
+\mathcal{L}_{\mathrm{CE}} = -\frac{1}{N}\sum_{i=1}^{N}\sum_{k=1}^{K}
+g_{i,k}\,\log p_{i,k},
+\end{equation}
+and the total objective is $\mathcal{L} = \mathcal{L}_{\mathrm{Dice}} +
+\mathcal{L}_{\mathrm{CE}}$. The Dice term directly optimises overlap and is robust
+to imbalance, while the cross-entropy term provides stable, well-behaved gradients
+for per-voxel classification.
+
+\section{Optimisation and training protocol}
+\label{sec:training}
+
+The network is optimised with AdamW \citep{loshchilov2019adamw} at an initial
+learning rate of $10^{-4}$ and weight decay $10^{-4}$. The learning rate follows a
+cosine-annealing schedule \citep{loshchilov2017sgdr} over the course of training.
+Training uses a batch size of two $128^3$ patches and automatic mixed precision to
+reduce memory use and accelerate computation on the GPU. We train for up to 80
+epochs with early stopping (patience 15) on the validation mean Dice, keeping the
+checkpoint with the highest validation score. All runs use a fixed seed for
+reproducibility, and experiments were carried out on a single NVIDIA GeForce
+RTX~5050 laptop GPU with 8~GB of memory.
+
+\section{Evaluation metrics}
+\label{sec:metrics}
+
+We report two complementary metrics per sub-region. The \textbf{Dice similarity
+coefficient} measures volumetric overlap between the predicted set of voxels $P$
+and the ground-truth set $G$:
+\begin{equation}
+\mathrm{Dice}(P,G) = \frac{2\,|P \cap G|}{|P| + |G|} \in [0,1],
+\end{equation}
+with higher values indicating better agreement. Because Dice is insensitive to
+the exact shape of the boundary, we also report the \textbf{95th-percentile
+Hausdorff distance} (HD95), which measures boundary error and is more sensitive to
+outliers. With $d(a,B)=\min_{b\in B}\lVert a-b\rVert$ the distance from a point to
+a set, the 95th-percentile Hausdorff distance is
+\begin{equation}
+\mathrm{HD95}(P,G) = \max\Big\{
+\operatorname*{P_{95}}_{a\in \partial P} d(a,\partial G),\;
+\operatorname*{P_{95}}_{b\in \partial G} d(b,\partial P)
+\Big\},
+\end{equation}
+where $\partial P,\partial G$ are the surfaces of the prediction and ground truth
+and $\mathrm{P}_{95}$ denotes the 95th percentile. HD95 is reported in millimetres
+(equivalently voxels, since the data are $1\,\mathrm{mm}^3$ isotropic), and lower
+values are better. We report both metrics for each foreground sub-region and their
+mean, and we visualise predictions as overlays on the FLAIR modality next to the
+ground truth.

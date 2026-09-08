@@ -1,0 +1,105 @@
+\chapter{Related Work}
+\label{ch:related}
+
+Automated brain tumour segmentation has been studied for over two decades, and
+the field has moved from hand-engineered pipelines to end-to-end deep learning.
+This chapter surveys the methods most relevant to the present work and situates
+the chosen approach among them.
+
+\section{Classical and early machine-learning methods}
+
+Early automated approaches relied on intensity thresholding, region growing,
+atlas registration and clustering (for example $k$-means or fuzzy $c$-means),
+often combined with hand-crafted texture or intensity features fed to classifiers
+such as support vector machines or random forests. These methods are
+interpretable and require no large training set, but they are sensitive to
+intensity inhomogeneity and noise, depend heavily on manual feature design and
+parameter tuning, and generally fail to capture the strong spatial context needed
+to separate diffuse tumour boundaries from healthy tissue. The Multimodal Brain
+Tumour Segmentation (BraTS) benchmark was introduced in part to compare such
+methods on a common footing and quantified their limitations against expert
+annotation \citep{menze2015brats}.
+
+\section{Fully convolutional and encoder--decoder networks}
+
+The decisive shift came with fully convolutional networks and, in particular, the
+U-Net \citep{ronneberger2015unet}. The U-Net couples a contracting encoder that
+captures context with a symmetric expanding decoder that restores spatial
+resolution, and it connects the two with skip connections that carry
+high-resolution features across the bottleneck. This design is highly effective
+for biomedical segmentation, where training data are scarce and precise
+boundaries matter.
+
+Because brain tumours are inherently volumetric, purely 2D models that process
+slices independently discard information along the through-plane axis.
+Two influential extensions address this directly: the 3D~U-Net, which replaces
+all 2D operations with their volumetric counterparts and learns from sparsely
+annotated volumes \citep{cicek20163dunet}, and V-Net, which introduced a
+Dice-based objective together with residual connections for volumetric medical
+segmentation \citep{milletari2016vnet}. The present work adopts a 3D~U-Net for
+exactly this reason.
+
+A major practical lesson from the field is that careful configuration often
+matters more than architectural novelty. The nnU-Net framework
+\citep{isensee2021nnunet} showed that a well-tuned, self-configuring U-Net --- with
+principled choices for pre-processing, patch size, normalisation and training ---
+matches or exceeds far more elaborate models across many medical segmentation
+tasks, and it remains a strong baseline on BraTS. This motivates our emphasis on
+a solid, standard 3D~U-Net with sound pre-processing and training rather than a
+bespoke architecture.
+
+\section{Attention and transformer-based models}
+
+More recent work introduces attention to focus computation on salient regions and
+to model long-range dependencies. Attention U-Net adds gating on the skip
+connections so that irrelevant background features are suppressed
+\citep{oktay2018attentionunet}. Transformer-based hybrids bring global
+self-attention into the encoder: TransBTS couples a convolutional encoder with a
+transformer bottleneck for 3D brain tumour segmentation \citep{wang2021transbts},
+and Swin~UNETR uses a hierarchical shifted-window transformer encoder with a
+convolutional decoder and reports strong BraTS performance
+\citep{hatamizadeh2022swinunetr}. These models can improve accuracy but are more
+data- and compute-hungry; on a single consumer GPU with limited memory a compact
+3D~U-Net is a more practical starting point, with transformer encoders left as a
+natural extension.
+
+\section{The BraTS benchmark}
+
+The BraTS challenge has been the central benchmark for this task
+\citep{menze2015brats,bakas2017advancing}. It provides multi-institutional,
+multi-parametric MRI scans that are skull-stripped, co-registered to a common
+anatomical template and resampled to $1\,\mathrm{mm}^3$ isotropic resolution, with
+expert annotations of three tumour sub-regions. Crucially for this project, the
+BraTS~2020 release labels each case by grade, distinguishing high-grade glioma
+(glioblastoma) from lower-grade glioma; this label makes it possible to restrict
+training and evaluation to genuine glioblastoma cases. Standardised data and
+evaluation make results across methods directly comparable, and the Dice
+coefficient and 95th-percentile Hausdorff distance used here are the benchmark's
+established metrics.
+
+\section{Positioning of this work}
+
+Table~\ref{tab:related} summarises the main architectural families. This project
+deliberately builds on a standard 3D~U-Net rather than a transformer model: the
+goal is a correct, reproducible and honestly evaluated glioblastoma-specific
+pipeline that runs on a single 8~GB GPU, with clear headroom to adopt the more
+advanced encoders discussed above as future work.
+
+\begin{table}[t]
+\centering
+\caption{Representative architectural families for brain tumour segmentation.}
+\label{tab:related}
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabularx}{\textwidth}{@{}l R R@{}}
+\toprule
+Family & Representative work & Key idea \\
+\midrule
+2D encoder--decoder & U-Net \citep{ronneberger2015unet} & Skip connections, per-slice \\
+3D encoder--decoder & 3D~U-Net \citep{cicek20163dunet}, V-Net \citep{milletari2016vnet} & Volumetric context, Dice loss \\
+Self-configuring & nnU-Net \citep{isensee2021nnunet} & Automated pipeline configuration \\
+Attention-gated & Attention U-Net \citep{oktay2018attentionunet} & Gated skip connections \\
+Transformer hybrid & TransBTS \citep{wang2021transbts}, Swin~UNETR \citep{hatamizadeh2022swinunetr} & Global self-attention encoder \\
+\bottomrule
+\end{tabularx}
+\end{table}

@@ -1,0 +1,58 @@
+\chapter{Discussion and Limitations}
+\label{ch:discussion}
+
+\section{Interpretation}
+
+The results show that a standard 3D~U-Net, given the four co-registered MRI
+modalities and trained with a combined Dice and cross-entropy objective, learns to
+localise and segment glioblastoma sub-regions from multi-parametric MRI, reaching a
+foreground mean Dice of 0.71. As is typical on BraTS, performance is not uniform
+across sub-regions. The peritumoral edema achieves the highest Dice (0.77): it is
+comparatively large and well contrasted on FLAIR. The enhancing tumour is also
+segmented well (Dice 0.73) and in fact has the tightest boundary agreement (the
+lowest HD95, 6.4~mm), reflecting the sharp contrast it shows on T1Gd. The
+necrotic/non-enhancing core is the hardest sub-region (Dice 0.61): it is smaller,
+more irregular and defined largely by the \emph{absence} of enhancement, which
+makes its boundary intrinsically ambiguous. This ordering is consistent with the
+qualitative example, where the core is the part most often under-segmented.
+
+\section{Failure cases}
+
+Two failure modes are worth noting. First, in slices with little or no tumour the
+model occasionally produces scattered false-positive voxels; this is characteristic
+of under-training and of the class imbalance between background and tumour, and it
+is reduced both by longer training and by the Dice term in the loss. Second, where
+two tissue types have similar appearance --- for instance necrotic core against
+non-enhancing tumour, or edema against normal white-matter hyperintensity --- the
+model can mislabel one as the other. These are precisely the boundaries that also
+cause disagreement between human raters.
+
+\section{Limitations}
+
+Several limitations should be stated plainly.
+
+\begin{itemize}
+  \item \textbf{Single dataset, no external test set.} The model is trained and
+        evaluated only on BraTS~2020 HGG cases using an internal validation split.
+        It has not been tested on data from other institutions or scanners, so its
+        generalisation is unverified. A truly held-out or cross-institutional test
+        set would be needed to make claims about clinical robustness.
+  \item \textbf{Validation, not the official BraTS test protocol.} Results are
+        reported on our own validation split, not through the official BraTS
+        online evaluation, so they are not directly comparable to challenge
+        leaderboard entries.
+  \item \textbf{Fixed centre-crop.} Volumes are centre-cropped to a $128^3$ patch
+        for memory reasons. For most subjects this comfortably contains the brain,
+        but a tumour lying far from the centre could in principle be partly
+        clipped; a sliding-window or whole-volume inference scheme would remove
+        this risk.
+  \item \textbf{Restriction to HGG.} Focusing on glioblastoma keeps the framing
+        accurate but reduces the training set to 293 subjects and means the model
+        is not trained to handle lower-grade gliomas.
+  \item \textbf{Compute budget.} Training on a single 8~GB GPU constrains the
+        patch size, batch size and model capacity; larger patches, larger batches
+        or transformer encoders were out of scope here.
+\end{itemize}
+
+These limitations are directions for improvement rather than flaws in the method,
+and they inform the future work outlined next.

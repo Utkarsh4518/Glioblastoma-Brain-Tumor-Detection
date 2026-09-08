@@ -73,12 +73,22 @@ def _load_grade_map(root: Path) -> dict[str, str]:
 
 
 def _zscore_normalize(x: np.ndarray, axis: Optional[tuple] = None) -> np.ndarray:
-    """Z-score normalization over the brain (nonzero) region per channel."""
+    """
+    Z-score normalization per channel, done in float32 and in place.
+
+    Full BraTS volumes are large (4x240x240x155); mixing in float64 (numpy's
+    default accumulation dtype) would create ~286 MB intermediates per volume
+    and, with several parallel DataLoader workers, exhaust host RAM. Keeping
+    everything float32 and updating in place avoids those extra copies.
+    """
+    x = np.asarray(x, dtype=np.float32)
     axis = axis or tuple(range(x.ndim))
-    mean = np.mean(x, axis=axis, keepdims=True)
-    std = np.std(x, axis=axis, keepdims=True)
-    std = np.where(std > 1e-8, std, 1.0)
-    return ((x - mean) / std).astype(np.float32)
+    mean = np.mean(x, axis=axis, keepdims=True, dtype=np.float32)
+    std = np.std(x, axis=axis, keepdims=True, dtype=np.float32)
+    std = np.where(std > 1e-8, std, np.float32(1.0)).astype(np.float32)
+    x -= mean
+    x /= std
+    return x
 
 
 def _remap_mask_four_class(seg: np.ndarray) -> np.ndarray:
@@ -146,15 +156,18 @@ class NiftiBraTSDataset(Dataset):
         return len(self.subjects)
 
     def _load_volume(self, pid: str) -> tuple[np.ndarray, np.ndarray]:
-        """Load image (C, D, H, W) and mask (D, H, W)."""
+        """Load image (C, D, H, W) and mask (D, H, W), reading directly as float32."""
         paths = self._paths[pid]
-        modalities = [nib.load(paths[mod]).get_fdata() for mod in MODALITY_SUFFIXES]
+        # get_fdata(dtype=np.float32) reads in float32 instead of the default
+        # float64, halving the per-volume memory footprint (important with
+        # multiple DataLoader workers).
+        modalities = [nib.load(paths[mod]).get_fdata(dtype=np.float32) for mod in MODALITY_SUFFIXES]
         image = np.stack(modalities, axis=0)
         image = _zscore_normalize(image, axis=(-3, -2, -1))
 
-        seg = nib.load(paths["seg"]).get_fdata()
+        seg = nib.load(paths["seg"]).get_fdata(dtype=np.float32)
         mask = _remap_mask_four_class(seg)
-        return image.astype(np.float32), mask
+        return image, mask
 
     def _crop_patch(
         self,

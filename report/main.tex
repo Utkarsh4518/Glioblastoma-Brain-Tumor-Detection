@@ -1,0 +1,63 @@
+\documentclass[11pt,a4paper]{report}
+
+% ---------- packages ----------
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\newcolumntype{R}{>{\raggedright\arraybackslash}X}
+\usepackage{xcolor}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{natbib}
+\usepackage[hidelinks]{hyperref}
+
+\graphicspath{{figures/}}
+
+% Placeholder marker for values to be filled from the final training run.
+\newcommand{\todo}[1]{\textcolor{red}{[#1]}}
+
+% ---------- title ----------
+\title{\bfseries Automated Segmentation of Glioblastoma Sub-regions\\
+in Multi-parametric Brain MRI using a 3D U-Net}
+\author{Utkarsh Maurya}
+\date{September 2026}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+\noindent
+Glioblastoma is the most aggressive primary brain tumour in adults, and accurate
+delineation of its sub-regions in magnetic resonance imaging (MRI) is essential
+for diagnosis, treatment planning and monitoring. Manual segmentation is slow,
+labour-intensive and subject to inter-rater variability. This project develops a
+fully automated deep-learning pipeline that segments glioblastoma sub-regions
+from multi-parametric MRI. Using the BraTS~2020 dataset, we train a
+three-dimensional U-Net on the 293 high-grade-glioma (glioblastoma) cases, taking
+the four co-registered modalities (T1, T1Gd, T2, FLAIR) as input and producing a
+voxel-wise segmentation into background, necrotic/non-enhancing core, peritumoral
+edema and enhancing tumour. The network is optimised with a combined Dice and
+cross-entropy loss and evaluated with the Dice similarity coefficient and the
+95th-percentile Hausdorff distance. On a held-out validation split the model
+attains a mean foreground Dice of 0.71 (edema 0.77, enhancing tumour 0.73,
+necrotic/non-enhancing core 0.61) and localises the tumour region reliably. We discuss the behaviour of the model across sub-regions,
+its failure cases and limitations, and outline a deployment path as an
+interactive web application for tumour detection and localisation.
+\end{abstract}
+
+\tableofcontents
+
+\input{sections/introduction}
+\input{sections/related_work}
+\input{sections/methodology}
+\input{sections/results}
+\input{sections/discussion}
+\input{sections/conclusion}
+
+\bibliographystyle{plainnat}
+\bibliography{references}
+
+\end{document}

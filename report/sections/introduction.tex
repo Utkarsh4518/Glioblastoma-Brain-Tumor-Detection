@@ -1,0 +1,75 @@
+\chapter{Introduction}
+\label{ch:introduction}
+
+\section{Motivation}
+
+Gliomas are the most common primary tumours of the central nervous system, and
+glioblastoma (GBM, WHO grade~IV) is their most aggressive and most frequent
+malignant form in adults. Despite advances in surgery, radiotherapy and
+chemotherapy, the prognosis remains poor, with a median survival on the order of
+only 12--15 months after diagnosis. Because glioblastoma is highly infiltrative
+and heterogeneous, its early and precise characterisation is directly relevant to
+treatment planning, surgical guidance, radiotherapy target definition and the
+monitoring of disease progression.
+
+Magnetic resonance imaging (MRI) is the primary modality for assessing brain
+tumours because it provides excellent soft-tissue contrast without ionising
+radiation. In clinical practice several complementary sequences are acquired: a
+native T1-weighted scan (T1), a contrast-enhanced (gadolinium) T1-weighted scan
+(T1Gd), a T2-weighted scan (T2) and a T2 fluid-attenuated inversion-recovery scan
+(FLAIR). Each sequence highlights different tissue properties: the enhancing
+tumour rim is most visible on T1Gd, while peritumoral edema and infiltration are
+best appreciated on T2 and FLAIR. A complete assessment therefore requires the
+radiologist to reason jointly across all four sequences.
+
+\section{Problem statement}
+
+Delineating a glioblastoma and its sub-regions by hand is time-consuming and
+requires expert knowledge. A single case contains on the order of a hundred and
+fifty axial slices per sequence, and manual annotation of the tumour core,
+enhancing tumour and surrounding edema across the full volume can take a
+radiologist a considerable amount of time. Manual segmentation also suffers from
+substantial inter- and intra-rater variability, which limits reproducibility and
+complicates quantitative follow-up.
+
+Automating this task is difficult. Tumours vary widely in size, shape and
+location; intensities are not standardised across scanners and acquisitions; and
+the boundaries between sub-regions such as edema and healthy tissue are often
+diffuse. An automated method must integrate information from all four modalities,
+respect the three-dimensional structure of the tumour, and produce a dense
+voxel-level labelling rather than a single image-level decision.
+
+\section{Objectives and contributions}
+
+The objective of this project is to build a reliable, reproducible and fully
+automated pipeline that segments glioblastoma sub-regions from multi-parametric
+MRI, and to evaluate it honestly on a public benchmark. The specific
+contributions are:
+
+\begin{itemize}
+  \item A complete, reproducible training and evaluation pipeline for 3D brain
+        tumour segmentation, built on PyTorch and MONAI and configured through a
+        single entry point, with fixed seeds and a deterministic data split.
+  \item A study focused specifically on \emph{glioblastoma}: the BraTS~2020
+        cases are filtered by tumour grade so that the model is trained and
+        evaluated on the 293 high-grade-glioma (glioblastoma) subjects, keeping
+        the ``glioblastoma'' framing of this work accurate rather than mixing in
+        lower-grade gliomas.
+  \item A quantitative evaluation using both an overlap metric (Dice similarity
+        coefficient) and a boundary metric (95th-percentile Hausdorff distance),
+        reported per sub-region, together with qualitative overlays that place the
+        prediction next to the ground truth.
+  \item An honest discussion of the model's behaviour, its failure cases and its
+        limitations, and a concrete path towards a deployable web application
+        that detects and localises tumours from an uploaded scan.
+\end{itemize}
+
+\section{Report structure}
+
+Chapter~\ref{ch:related} reviews prior work on brain tumour segmentation, from
+classical methods to modern encoder--decoder and transformer architectures.
+Chapter~\ref{ch:method} describes the dataset, the pre-processing, the 3D~U-Net
+architecture, the loss function and the training and evaluation protocol.
+Chapter~\ref{ch:results} reports the quantitative and qualitative results.
+Chapter~\ref{ch:discussion} interprets these results and states the limitations
+of the study, and Chapter~\ref{ch:conclusion} concludes and outlines future work.

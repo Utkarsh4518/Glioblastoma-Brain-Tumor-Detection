@@ -33,3 +33,16 @@ checkpoints/
 # Logs
 *.log
 runs/
+
+# LaTeX build artifacts (keep .tex/.bib/.pdf, drop intermediates)
+*.aux
+*.out
+*.toc
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.synctex.gz
+
+# Scratch
+_full_run.ipynb

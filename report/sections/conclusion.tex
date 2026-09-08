@@ -1,0 +1,50 @@
+\chapter{Conclusion and Future Work}
+\label{ch:conclusion}
+
+\section{Conclusion}
+
+This project set out to build a reliable, reproducible and fully automated
+pipeline for segmenting glioblastoma sub-regions from multi-parametric brain MRI.
+Using the BraTS~2020 dataset restricted to its 293 high-grade-glioma cases, we
+trained a 3D~U-Net that takes the four co-registered MRI modalities as input and
+produces a dense voxel-wise segmentation into necrotic/non-enhancing core,
+peritumoral edema and enhancing tumour. The model was optimised with a combined
+Dice and cross-entropy loss and evaluated with both an overlap metric (Dice) and a
+boundary metric (HD95). It reaches a foreground mean Dice of 0.71 on the held-out
+validation split, localising the tumour reliably and segmenting the edema and
+enhancing tumour well, with the expected drop in accuracy on the smaller and more
+ambiguous necrotic core. Just as important, the whole study is reproducible: fixed
+seeds, a deterministic split, a single configurable entry point and a notebook that
+runs the pipeline end to end on a single consumer GPU.
+
+\section{Future work}
+
+Several concrete extensions follow directly from the limitations in
+Chapter~\ref{ch:discussion}:
+
+\begin{itemize}
+  \item \textbf{Stronger encoders.} The pipeline is architecture-agnostic;
+        swapping the 3D~U-Net for an attention-gated variant
+        \citep{oktay2018attentionunet} or a transformer encoder such as
+        Swin~UNETR \citep{hatamizadeh2022swinunetr} is a natural next step now
+        that the data and training loop are in place.
+  \item \textbf{Whole-volume inference.} Replacing the fixed centre-crop with
+        sliding-window inference would remove any risk of clipping off-centre
+        tumours and would align evaluation with standard BraTS practice.
+  \item \textbf{Broader data and external validation.} Training on the full BraTS
+        set (including LGG) and testing on an independent cohort would establish
+        how well the model generalises across grades, scanners and institutions.
+  \item \textbf{Uncertainty estimation.} Adding test-time dropout or ensembling
+        would let the model express confidence in its predictions, which is
+        valuable in a clinical decision-support setting.
+  \item \textbf{Deployment as a web application.} The trained model is intended to
+        be wrapped in a simple interactive application in which a user uploads a
+        brain scan and receives either a message that no tumour was detected or a
+        visualisation of the tumour's location and sub-regions overlaid on the
+        scan. This turns the research pipeline into a usable tool and is the
+        planned next stage of the project.
+\end{itemize}
+
+Taken together, this work delivers a correct and honestly evaluated glioblastoma
+segmentation pipeline and a clear path from that pipeline towards a deployable
+tool.
