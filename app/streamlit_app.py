@@ -79,24 +79,24 @@ model, epoch, device = _get_model(ckpt, device_pref)
 st.sidebar.success(f"Model loaded (epoch {epoch}) · device: {device.type}")
 
 # ----------------------------- Input -----------------------------
-_has_examples = Path(data_root).exists()
+# "Try an example" uses subjects bundled with the app (app/examples/), so it
+# always works, including on a cloud deployment with no access to the full
+# local BraTS dataset.
+EXAMPLE_LABELS = {
+    "BraTS20_Training_341": "Small tumor",
+    "BraTS20_Training_049": "Medium tumor",
+    "BraTS20_Training_001": "Large tumor",
+}
 
 volumes = None          # list of 4 arrays [t1, t1ce, t2, flair]
-gt = None               # optional ground-truth label volume (example mode)
+gt = None               # optional ground-truth label volume
 source_label = ""
 
-if not _has_examples:
-    # No local BraTS data on this machine (e.g. the cloud-hosted app): the
-    # "Try an example" mode has nothing to show, so skip straight to upload
-    # instead of offering a mode that can only ever produce a dead-end warning.
-    st.caption("Running in upload mode (no local example dataset found on this server).")
-    mode = "Upload MRI (4 modalities)"
-else:
-    mode = st.radio(
-        "Input",
-        ["Try an example", "Upload MRI (4 modalities)"],
-        horizontal=True,
-    )
+mode = st.radio(
+    "Input",
+    ["Try an example", "Upload MRI (4 modalities)"],
+    horizontal=True,
+)
 
 if mode == "Upload MRI (4 modalities)":
     st.info(
@@ -115,18 +115,41 @@ if mode == "Upload MRI (4 modalities)":
         except Exception as e:  # noqa: BLE001
             st.error(f"Could not read the uploaded files: {e}")
 
-else:  # example (only reachable when _has_examples is True)
-    subjects = _list_example_subjects(data_root)
-    pid = st.selectbox("Example subject", list(subjects.keys()))
-    show_gt = st.checkbox("Show ground truth for comparison", value=False)
-    if pid:
-        paths = subjects[pid]
-        volumes = [inf.load_nifti(paths[m]) for m in inf.MODALITIES]
-        source_label = pid
-        if show_gt and "seg" in paths:
-            seg = inf.load_nifti(paths["seg"]).astype(np.int64)
-            seg[seg == 4] = 3
-            gt = seg
+else:  # Try an example — bundled with the app
+    bundled = inf.list_bundled_examples()
+    if not bundled:
+        st.error("No bundled examples found under app/examples/.")
+    else:
+        pid = st.selectbox(
+            "Example subject",
+            list(bundled.keys()),
+            format_func=lambda p: f"{EXAMPLE_LABELS.get(p, p)} ({p})",
+        )
+        show_gt = st.checkbox("Show ground truth for comparison", value=True)
+        if pid:
+            volumes, gt_full = inf.load_bundled_example(pid)
+            source_label = f"{EXAMPLE_LABELS.get(pid, pid)} — {pid}"
+            gt = gt_full if show_gt else None
+
+    with st.expander("Advanced: browse a full local BraTS dataset instead"):
+        st.caption(
+            "Only useful if you have the full BraTS2020 dataset on this machine "
+            "(not available on the hosted demo)."
+        )
+        local_root = st.text_input("Local BraTS data root", value=data_root, key="local_root")
+        if Path(local_root).exists():
+            local_subjects = _list_example_subjects(local_root)
+            local_pid = st.selectbox("Local subject", list(local_subjects.keys()), key="local_pid")
+            if st.button("Use this local subject"):
+                paths = local_subjects[local_pid]
+                volumes = [inf.load_nifti(paths[m]) for m in inf.MODALITIES]
+                source_label = local_pid
+                if "seg" in paths:
+                    seg = inf.load_nifti(paths["seg"]).astype(np.int64)
+                    seg[seg == 4] = 3
+                    gt = seg
+        else:
+            st.caption(f"Path not found: `{local_root}`")
 
 # ----------------------------- Run + results -----------------------------
 if volumes is not None and st.button("Analyze scan", type="primary"):

@@ -42,6 +42,11 @@ VOXEL_ML = 0.001  # 1 mm^3 isotropic -> 0.001 mL
 # without external weight hosting.
 DEFAULT_CHECKPOINT = str(Path(__file__).resolve().parent / "weights" / "brats_hgg_unet_fp16.pt")
 
+# Bundled example subjects (~9 MB each, already center-cropped to ROI so no
+# local BraTS dataset is needed) so "Try an example" always works, including
+# on a cloud deployment with no access to the full local dataset.
+EXAMPLES_DIR = Path(__file__).resolve().parent / "examples"
+
 
 def get_device(pref: str = "auto") -> torch.device:
     if pref == "cpu":
@@ -125,6 +130,46 @@ def best_tumor_slice(pred: np.ndarray) -> int:
     """Axial slice index (first axis) with the most tumour voxels."""
     per_slice = (pred > 0).reshape(pred.shape[0], -1).sum(axis=1)
     return int(per_slice.argmax()) if per_slice.max() > 0 else pred.shape[0] // 2
+
+
+def list_bundled_examples() -> dict[str, dict[str, Path]]:
+    """
+    Discover bundled example subjects under app/examples/<subject_id>/.
+
+    Each subject folder holds <subject_id>_{t1,t1ce,t2,flair}.nii.gz (already
+    center-cropped to ROI) and, optionally, <subject_id>_seg.nii.gz (ground
+    truth, labels already remapped to 0..3).
+    """
+    if not EXAMPLES_DIR.exists():
+        return {}
+    examples: dict[str, dict[str, Path]] = {}
+    for subject_dir in sorted(EXAMPLES_DIR.iterdir()):
+        if not subject_dir.is_dir():
+            continue
+        pid = subject_dir.name
+        paths = {}
+        for mod in MODALITIES:
+            p = subject_dir / f"{pid}_{mod}.nii.gz"
+            if p.exists():
+                paths[mod] = p
+        if len(paths) != 4:
+            continue  # incomplete subject folder; skip
+        seg_path = subject_dir / f"{pid}_seg.nii.gz"
+        if seg_path.exists():
+            paths["seg"] = seg_path
+        examples[pid] = paths
+    return examples
+
+
+def load_bundled_example(pid: str) -> tuple[list[np.ndarray], np.ndarray | None]:
+    """
+    Load one bundled example's four modality volumes and, if present, its
+    ground-truth label volume (already 0..3, no remap needed).
+    """
+    paths = list_bundled_examples()[pid]
+    volumes = [load_nifti(paths[m]) for m in MODALITIES]
+    gt = load_nifti(paths["seg"]).astype(np.int64) if "seg" in paths else None
+    return volumes, gt
 
 
 def make_overlay(bg_slice: np.ndarray, label_slice: np.ndarray, alpha: float = 0.45) -> np.ndarray:
