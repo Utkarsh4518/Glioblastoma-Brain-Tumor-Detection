@@ -38,6 +38,10 @@ CLASS_COLORS = {1: (220, 30, 30), 2: (30, 200, 30), 3: (40, 110, 255)}
 ROI = (128, 128, 128)
 VOXEL_ML = 0.001  # 1 mm^3 isotropic -> 0.001 mL
 
+# Bundled fp16 weights (~38 MB) so the app is self-contained and deployable
+# without external weight hosting.
+DEFAULT_CHECKPOINT = str(Path(__file__).resolve().parent / "weights" / "brats_hgg_unet_fp16.pt")
+
 
 def get_device(pref: str = "auto") -> torch.device:
     if pref == "cpu":
@@ -52,6 +56,9 @@ def load_model(checkpoint_path: str, device: torch.device):
     model = build_model(cfg, in_channels=4, out_channels=4)
     ck = torch.load(checkpoint_path, map_location=device, weights_only=False)
     state = ck.get("model_state_dict", ck) if isinstance(ck, dict) else ck
+    # Weights may be stored in fp16 (bundled file); cast back to fp32 for compute.
+    state = {k: (v.float() if torch.is_tensor(v) and v.is_floating_point() else v)
+             for k, v in state.items()}
     model.load_state_dict(state)
     model.to(device).eval()
     epoch = ck.get("epoch") if isinstance(ck, dict) else None

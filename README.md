@@ -37,11 +37,21 @@ python -m venv .venv
 #   CPU only:  pip install torch torchvision
 pip install torch torchvision --index-url https://download.pytorch.org/whl/cu128
 
-pip install -r requirements.txt
+pip install -r requirements-dev.txt
 python tools/check_environment.py
 ```
 
-`check_environment.py` reports the detected Python/PyTorch/CUDA versions and fails loudly if a required package is missing.
+`check_environment.py` reports the detected Python/PyTorch/CUDA versions and fails loudly if a required package is missing. (`requirements.txt` is the slim runtime for the web app; `requirements-dev.txt` adds the training/notebook stack.)
+
+## Web app
+
+An interactive [Streamlit](https://streamlit.io) app (`app/streamlit_app.py`) runs the trained model on a brain MRI and shows the tumour location, or reports that no tumour was detected. It ships with the model weights bundled (`app/weights/`, ~38 MB fp16), so it is self-contained.
+
+```bash
+streamlit run app/streamlit_app.py
+```
+
+Then open the URL it prints (`http://localhost:8501`). Use **Try an example** (needs a local `DATA_ROOT`) or **Upload MRI** (four co-registered `.nii`/`.nii.gz` modalities: T1, T1Gd, T2, FLAIR). See [`DEPLOY.md`](DEPLOY.md) to host it as a public URL.
 
 ## Notebook (recommended entry point)
 

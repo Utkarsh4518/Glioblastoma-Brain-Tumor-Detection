@@ -1,19 +1,11 @@
-# Install PyTorch first (see README for the CUDA-specific index URL), then:
-#   pip install -r requirements.txt
+# Runtime dependencies for the Streamlit inference app (app/streamlit_app.py).
+# Cloud platforms (e.g. Streamlit Community Cloud) install this file.
+#
+# For a local GPU setup, install PyTorch from the CUDA index first (see README);
+# an already-installed torch satisfies the line below and is left untouched.
+# For training / evaluation / the notebook, use requirements-dev.txt instead.
+torch>=2.0
 monai>=1.3
 nibabel>=5.0
-h5py>=3.9
-hydra-core>=1.3
-omegaconf>=2.3
-scikit-learn>=1.3
 numpy>=1.26
-tensorboard>=2.15
-matplotlib>=3.7
-Pillow>=10.0
-tqdm>=4.65
-# For running the notebook (brats_glioblastoma_pipeline.ipynb):
-jupyter>=1.0
-ipykernel>=6.25
-ipywidgets>=8.0
-# For the Streamlit inference app (app/streamlit_app.py):
 streamlit>=1.30

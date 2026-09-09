@@ -21,6 +21,9 @@ outputs/
 checkpoints/
 *.pt
 *.pth
+# ...but keep the small bundled inference weights for the app
+!app/weights/
+!app/weights/*.pt
 
 # IDE
 .idea/

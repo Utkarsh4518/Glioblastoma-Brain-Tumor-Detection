@@ -24,9 +24,7 @@ if str(REPO_ROOT) not in sys.path:
 
 from app import inference as inf  # noqa: E402
 
-DEFAULT_CKPT = os.environ.get(
-    "BRATS_CHECKPOINT", r"U:\brats_outputs\checkpoints\brats2020_hgg_best.pt"
-)
+DEFAULT_CKPT = os.environ.get("BRATS_CHECKPOINT", inf.DEFAULT_CHECKPOINT)
 DEFAULT_DATA_ROOT = os.environ.get(
     "DATA_ROOT", r"U:\BraTS2020_TrainingData\MICCAI_BraTS2020_TrainingData"
 )
@@ -81,7 +79,13 @@ model, epoch, device = _get_model(ckpt, device_pref)
 st.sidebar.success(f"Model loaded (epoch {epoch}) · device: {device.type}")
 
 # ----------------------------- Input -----------------------------
-mode = st.radio("Input", ["Try an example", "Upload MRI (4 modalities)"], horizontal=True)
+_has_examples = Path(data_root).exists()
+mode = st.radio(
+    "Input",
+    ["Try an example", "Upload MRI (4 modalities)"],
+    index=0 if _has_examples else 1,  # default to upload when no example data (e.g. cloud)
+    horizontal=True,
+)
 
 volumes = None          # list of 4 arrays [t1, t1ce, t2, flair]
 gt = None               # optional ground-truth label volume (example mode)
