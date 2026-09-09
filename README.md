@@ -1,5 +1,7 @@
 # Glioblastoma Brain Tumor Segmentation — BraTS 2020 (3D U-Net)
 
+**🧠 Live demo: [glioblastome-brain-tumor-detection.streamlit.app](https://glioblastome-brain-tumor-detection.streamlit.app/)** — try it instantly with a bundled example scan, no setup required.
+
 PyTorch pipeline for segmenting glioblastoma sub-regions in multi-parametric brain MRI (BraTS 2020). A 3D U-Net maps the four MRI modalities (T1, T1Gd, T2, FLAIR) to a four-class voxel segmentation (background, necrotic/non-enhancing core, edema, enhancing tumor). The repo also includes 2D slice-based (HDF5) support and a binary tumor classifier. Built with MONAI and Hydra.
 
 The full write-up is in [`report/main.pdf`](report/main.pdf) (LaTeX source under `report/`).
@@ -45,13 +47,15 @@ python tools/check_environment.py
 
 ## Web app
 
-An interactive [Streamlit](https://streamlit.io) app (`app/streamlit_app.py`) runs the trained model on a brain MRI and shows the tumour location, or reports that no tumour was detected. It ships with the model weights bundled (`app/weights/`, ~38 MB fp16), so it is self-contained.
+**Live at [glioblastome-brain-tumor-detection.streamlit.app](https://glioblastome-brain-tumor-detection.streamlit.app/).** An interactive [Streamlit](https://streamlit.io) app (`app/streamlit_app.py`) runs the trained model on a brain MRI and shows the tumor location, or reports that no tumor was detected. It ships with the model weights and 3 example scans bundled (`app/weights/`, `app/examples/`), so it is fully self-contained — **Try an example** works immediately, no setup or upload required. **Upload MRI** takes your own four co-registered `.nii`/`.nii.gz` modalities (T1, T1Gd, T2, FLAIR).
+
+To run it locally instead:
 
 ```bash
 streamlit run app/streamlit_app.py
 ```
 
-Then open the URL it prints (`http://localhost:8501`). Use **Try an example** (needs a local `DATA_ROOT`) or **Upload MRI** (four co-registered `.nii`/`.nii.gz` modalities: T1, T1Gd, T2, FLAIR). See [`DEPLOY.md`](DEPLOY.md) to host it as a public URL.
+Then open the URL it prints (`http://localhost:8501`). See [`DEPLOY.md`](DEPLOY.md) to host your own copy.
 
 ## Notebook (recommended entry point)
 
