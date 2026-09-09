@@ -16,7 +16,6 @@ given mirror uses different dataset names.
 from pathlib import Path
 from typing import Optional
 
-import h5py
 import numpy as np
 import torch
 from torch.utils.data import Dataset
@@ -46,6 +45,7 @@ class H5BraTSDataset(Dataset):
         return len(self.files)
 
     def _load(self, path: Path) -> tuple[np.ndarray, np.ndarray]:
+        import h5py  # lazy: only needed for the (optional) 2D HDF5 mode
         with h5py.File(path, "r") as f:
             image = np.asarray(f[self.image_key])
             mask = np.asarray(f[self.mask_key])
