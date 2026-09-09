@@ -80,16 +80,23 @@ st.sidebar.success(f"Model loaded (epoch {epoch}) · device: {device.type}")
 
 # ----------------------------- Input -----------------------------
 _has_examples = Path(data_root).exists()
-mode = st.radio(
-    "Input",
-    ["Try an example", "Upload MRI (4 modalities)"],
-    index=0 if _has_examples else 1,  # default to upload when no example data (e.g. cloud)
-    horizontal=True,
-)
 
 volumes = None          # list of 4 arrays [t1, t1ce, t2, flair]
 gt = None               # optional ground-truth label volume (example mode)
 source_label = ""
+
+if not _has_examples:
+    # No local BraTS data on this machine (e.g. the cloud-hosted app): the
+    # "Try an example" mode has nothing to show, so skip straight to upload
+    # instead of offering a mode that can only ever produce a dead-end warning.
+    st.caption("Running in upload mode (no local example dataset found on this server).")
+    mode = "Upload MRI (4 modalities)"
+else:
+    mode = st.radio(
+        "Input",
+        ["Try an example", "Upload MRI (4 modalities)"],
+        horizontal=True,
+    )
 
 if mode == "Upload MRI (4 modalities)":
     st.info(
@@ -108,21 +115,18 @@ if mode == "Upload MRI (4 modalities)":
         except Exception as e:  # noqa: BLE001
             st.error(f"Could not read the uploaded files: {e}")
 
-else:  # example
-    if not Path(data_root).exists():
-        st.warning(f"Example data root not found: `{data_root}`. Set it in the sidebar or upload instead.")
-    else:
-        subjects = _list_example_subjects(data_root)
-        pid = st.selectbox("Example subject", list(subjects.keys()))
-        show_gt = st.checkbox("Show ground truth for comparison", value=False)
-        if pid:
-            paths = subjects[pid]
-            volumes = [inf.load_nifti(paths[m]) for m in inf.MODALITIES]
-            source_label = pid
-            if show_gt and "seg" in paths:
-                seg = inf.load_nifti(paths["seg"]).astype(np.int64)
-                seg[seg == 4] = 3
-                gt = seg
+else:  # example (only reachable when _has_examples is True)
+    subjects = _list_example_subjects(data_root)
+    pid = st.selectbox("Example subject", list(subjects.keys()))
+    show_gt = st.checkbox("Show ground truth for comparison", value=False)
+    if pid:
+        paths = subjects[pid]
+        volumes = [inf.load_nifti(paths[m]) for m in inf.MODALITIES]
+        source_label = pid
+        if show_gt and "seg" in paths:
+            seg = inf.load_nifti(paths["seg"]).astype(np.int64)
+            seg[seg == 4] = 3
+            gt = seg
 
 # ----------------------------- Run + results -----------------------------
 if volumes is not None and st.button("Analyze scan", type="primary"):
