@@ -62,15 +62,16 @@ st.markdown(
     """
     <style>
     :root {
-        --ink: #0b1220;
-        --ink-soft: #4b5563;
-        --bg-soft: #f6f8fb;
-        --border: #e3e8ef;
-        --accent: #2563eb;
-        --accent-soft: #eef3ff;
-        --cyan: #0891b2;
-        --pink: #db2777;
-        --shadow: 0 1px 2px rgba(16,24,40,.04), 0 4px 12px rgba(16,24,40,.06);
+        --ink: #e6edf3;
+        --ink-soft: #9aa7b8;
+        --bg-soft: #171c26;
+        --card-bg: #161b22;
+        --border: #262d3a;
+        --accent: #4c8dfa;
+        --accent-soft: #14223b;
+        --cyan: #22b8cf;
+        --pink: #ec4899;
+        --shadow: 0 1px 2px rgba(0,0,0,.4), 0 6px 18px rgba(0,0,0,.45);
         --radius: 14px;
     }
     /* extra top padding clears Streamlit's fixed header bar, which otherwise
@@ -93,7 +94,7 @@ st.markdown(
     .status-pill {
         display: inline-flex; align-items: center; gap: 8px; margin-top: 1.1rem;
         padding: 6px 14px; border-radius: 999px; background: var(--accent-soft);
-        border: 1px solid #d6e2ff; color: var(--accent); font-weight: 600; font-size: .82rem;
+        border: 1px solid #24406e; color: var(--accent); font-weight: 600; font-size: .82rem;
     }
     .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #16a34a; display: inline-block; }
     .status-dot.warn { background: #d97706; }
@@ -127,7 +128,7 @@ st.markdown(
     .card-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
     @media (max-width: 900px) { .card-grid { grid-template-columns: 1fr; } }
     .info-card {
-        border: 1px solid var(--border); border-radius: var(--radius); background: #fff;
+        border: 1px solid var(--border); border-radius: var(--radius); background: var(--card-bg);
         box-shadow: var(--shadow); padding: 18px 20px; height: 100%;
     }
     .info-card .tag { font-size: .68rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--cyan); }
@@ -137,7 +138,7 @@ st.markdown(
     .pipeline { display: flex; align-items: stretch; gap: 8px; flex-wrap: wrap; }
     .pipe-step {
         flex: 1 1 190px; border: 1px solid var(--border); border-radius: var(--radius);
-        background: #fff; box-shadow: var(--shadow); padding: 16px 16px; position: relative;
+        background: var(--card-bg); box-shadow: var(--shadow); padding: 16px 16px; position: relative;
     }
     .pipe-step .num { font-size: .72rem; font-weight: 800; color: #fff; background: var(--accent);
         width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 10px; }
@@ -157,13 +158,13 @@ st.markdown(
         border-radius: var(--radius); padding: 16px 20px; border: 1px solid var(--border);
         display: flex; align-items: center; gap: 12px; margin-bottom: 14px;
     }
-    .result-banner.tumor { background: #fff7ed; border-color: #fed7aa; }
-    .result-banner.clear { background: #f0fdf4; border-color: #bbf7d0; }
+    .result-banner.tumor { background: #241a0d; border-color: #6b4415; }
+    .result-banner.clear { background: #0f2117; border-color: #1e5631; }
     .result-banner .headline { font-weight: 700; font-size: 1.05rem; color: var(--ink); }
     .result-banner .sub { color: var(--ink-soft); font-size: .85rem; }
 
     .metric-card {
-        border: 1px solid var(--border); border-radius: 12px; background: #fff; box-shadow: var(--shadow);
+        border: 1px solid var(--border); border-radius: 12px; background: var(--card-bg); box-shadow: var(--shadow);
         padding: 12px 14px; margin-bottom: 10px;
     }
     .metric-card .lbl { font-size: .82rem; color: var(--ink-soft); display: flex; align-items: center; gap: 7px; }
@@ -171,25 +172,47 @@ st.markdown(
     .swatch { width: 11px; height: 11px; border-radius: 3px; display: inline-block; }
 
     .img-card { border: 1px solid var(--border); border-radius: var(--radius); background: #0b1120;
-        box-shadow: var(--shadow); padding: 10px 10px 12px 10px; }
-    .img-card img { border-radius: 8px; width: 100%; display: block; }
-    .img-card .cap { text-align: center; color: #cbd5e1; font-size: .78rem; font-weight: 600; margin-top: 8px; }
+        box-shadow: var(--shadow); padding: 14px 14px 12px 14px; }
+    .img-card.hero-viz { padding: 18px 18px 16px 18px; }
+    .img-card .img-tag {
+        font-size: .68rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+        color: var(--cyan); margin-bottom: 10px;
+    }
+    .img-card img { border-radius: 8px; width: 100%; display: block; aspect-ratio: 1 / 1; object-fit: cover; }
+    .img-card .cap { text-align: center; color: #cbd5e1; font-size: .78rem; font-weight: 600; margin-top: 10px; }
     .placeholder-panel {
         border: 1px dashed var(--border); border-radius: var(--radius); background: var(--bg-soft);
         padding: 40px 20px; text-align: center; color: var(--ink-soft); font-size: .9rem;
     }
 
+    /* ---- input -> output flow connector (shown right before results) ---- */
+    .flow-strip {
+        display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+        padding: 14px 20px; border: 1px solid var(--border); border-radius: 12px;
+        background: var(--card-bg); margin: 1.2rem 0 1.6rem 0;
+    }
+    .flow-strip .fnode { display: flex; flex-direction: column; line-height: 1.25; }
+    .flow-strip .fnode .ftitle { font-size: .82rem; font-weight: 700; color: var(--ink); letter-spacing: .02em; }
+    .flow-strip .fnode .fsub { font-size: .72rem; color: var(--ink-soft); }
+    .flow-strip .farrow { color: var(--ink-soft); font-size: 1.1rem; flex: 0 0 auto; }
+
     .about-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
     @media (max-width: 900px) { .about-grid { grid-template-columns: repeat(2, 1fr); } }
-    .about-item { border: 1px solid var(--border); border-radius: 12px; background: #fff; padding: 14px 16px; }
+    .about-item { border: 1px solid var(--border); border-radius: 12px; background: var(--card-bg); padding: 14px 16px; }
     .about-item .k { font-size: .7rem; text-transform: uppercase; letter-spacing: .06em; color: var(--cyan); font-weight: 700; }
     .about-item .v { font-size: .95rem; color: var(--ink); font-weight: 600; margin-top: 3px; }
 
-    .snapshot-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .snapshot-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; align-items: stretch; }
     @media (max-width: 900px) { .snapshot-grid { grid-template-columns: 1fr; } }
-    .snapshot-card { border: 1px solid var(--border); border-radius: var(--radius); background: #fff; box-shadow: var(--shadow); overflow: hidden; }
-    .snapshot-card img { width: 100%; display: block; }
-    .snapshot-card .cap { padding: 10px 14px 14px 14px; font-size: .85rem; font-weight: 600; color: var(--ink); }
+    .snapshot-card {
+        border: 1px solid var(--border); border-radius: var(--radius); background: var(--card-bg);
+        box-shadow: var(--shadow); overflow: hidden; height: 100%; display: flex; flex-direction: column;
+        transition: transform .15s ease, box-shadow .15s ease;
+    }
+    .snapshot-card:hover { transform: translateY(-3px); box-shadow: 0 2px 4px rgba(0,0,0,.4), 0 12px 26px rgba(0,0,0,.5); }
+    .snapshot-img-wrap { height: 190px; background: #0b1120; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+    .snapshot-img-wrap img { max-width: 100%; max-height: 100%; object-fit: contain; display: block; }
+    .snapshot-card .cap { padding: 10px 14px 14px 14px; font-size: .85rem; font-weight: 600; color: var(--ink); margin-top: auto; }
 
     .app-footer { text-align: center; color: var(--ink-soft); font-size: .82rem; padding-top: 8px; }
     .app-footer .line1 { font-weight: 600; color: var(--ink); }
@@ -235,9 +258,11 @@ def _np_to_b64_png(arr: np.ndarray) -> str:
     return base64.b64encode(buf.getvalue()).decode("ascii")
 
 
-def _img_card_html(src_b64: str, caption: str) -> str:
+def _img_card_html(src_b64: str, caption: str, tag: str | None = None, hero: bool = False) -> str:
+    tag_html = f"<div class='img-tag'>{tag}</div>" if tag else ""
+    cls = "img-card hero-viz" if hero else "img-card"
     return (
-        f"<div class='img-card'><img src='data:image/png;base64,{src_b64}'/>"
+        f"<div class='{cls}'>{tag_html}<img src='data:image/png;base64,{src_b64}'/>"
         f"<div class='cap'>{caption}</div></div>"
     )
 
@@ -273,10 +298,13 @@ def _modality_preview_grid(volumes: list[np.ndarray]) -> None:
         panel = inf.make_overlay(vol[mid], np.zeros_like(vol[mid], dtype=np.int64))
         with col:
             st.markdown(
-                _img_card_html(_np_to_b64_png(panel), inf.MODALITY_LABELS[mod]),
+                _img_card_html(
+                    _np_to_b64_png(panel),
+                    MODALITY_SUBLABELS.get(mod, ""),
+                    tag=inf.MODALITY_LABELS[mod],
+                ),
                 unsafe_allow_html=True,
             )
-            st.caption(MODALITY_SUBLABELS.get(mod, ""))
 
 
 # ============================================================================
@@ -408,8 +436,8 @@ with st.sidebar:
 # ----- model load: unchanged logic/order from the original app -----
 if not Path(ckpt).exists():
     status_slot.markdown(
-        "<div class='status-pill' style='background:#fef2f2;border-color:#fecaca;color:#b91c1c'>"
-        "<span class='status-dot' style='background:#dc2626'></span>Model checkpoint not found</div>",
+        "<div class='status-pill' style='background:#2a1215;border-color:#5c2630;color:#f87171'>"
+        "<span class='status-dot' style='background:#ef4444'></span>Model checkpoint not found</div>",
         unsafe_allow_html=True,
     )
     st.error(
@@ -554,16 +582,33 @@ else:
 # 6 & 7. RESULTS + GROUND TRUTH COMPARISON
 # ============================================================================
 if volumes is not None and analyze:
-    with st.spinner("Running 3D segmentation… this can take up to a minute on CPU."):
+    with st.status("Analysis in progress", expanded=True) as status_box:
+        st.write("Preparing volumetric MRI")
         image = inf.preprocess(volumes)             # (4, D, H, W), z-scored + cropped
+        st.write("Running 3D U-Net")
         pred = inf.predict(model, image, device)    # (D, H, W)
+        st.write("Generating segmentation")
         stats = inf.summarize(pred)
+        status_box.update(label="Analysis complete", state="complete", expanded=False)
 
-    st.markdown("<hr class='thin'/>", unsafe_allow_html=True)
+    # ---- input -> output connector, bridging the MRI preview above to the result below ----
+    st.markdown(
+        """
+        <div class="flow-strip">
+            <div class="fnode"><span class="ftitle">MULTIMODAL MRI</span><span class="fsub">T1 • T1Gd • T2 • FLAIR</span></div>
+            <div class="farrow">→</div>
+            <div class="fnode"><span class="ftitle">3D U-NET</span><span class="fsub">Volumetric segmentation</span></div>
+            <div class="farrow">→</div>
+            <div class="fnode"><span class="ftitle">SEGMENTATION MASK</span><span class="fsub">Tumor sub-regions</span></div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
     st.markdown(
         f"""
         <div class="section-title">Segmentation Results</div>
-        <div class="section-sub">Case: {source_label}</div>
+        <div class="section-sub">AI-generated tumor sub-region segmentation · Case: {source_label}</div>
         """,
         unsafe_allow_html=True,
     )
@@ -580,12 +625,14 @@ if volumes is not None and analyze:
     else:
         default_slice = inf.best_tumor_slice(pred)
 
-    res_left, res_right = st.columns([2, 1], gap="large")
+    res_left, res_right = st.columns([2.2, 1], gap="large")
     with res_left:
         s = st.slider("Axial slice", 0, pred.shape[0] - 1, default_slice)
         pred_panel = inf.make_overlay(flair[s], pred[s])
-        st.markdown(_img_card_html(_np_to_b64_png(pred_panel), "Prediction — Axial slice"), unsafe_allow_html=True)
-        st.markdown(_legend_html(), unsafe_allow_html=True)
+        st.markdown(
+            _img_card_html(_np_to_b64_png(pred_panel), f"Axial slice {s}", tag="MODEL PREDICTION", hero=True),
+            unsafe_allow_html=True,
+        )
 
     with res_right:
         if not stats["tumor_present"]:
@@ -604,7 +651,10 @@ if volumes is not None and analyze:
                 f"</div></div>",
                 unsafe_allow_html=True,
             )
-            st.markdown("**Prediction Summary**")
+            st.markdown(
+                "<div style='font-weight:700;color:var(--ink);margin-bottom:.5rem'>Prediction Summary</div>",
+                unsafe_allow_html=True,
+            )
             for cls in (3, 2, 1):  # ET, ED, NCR
                 st.markdown(
                     f"""
@@ -616,22 +666,38 @@ if volumes is not None and analyze:
                     unsafe_allow_html=True,
                 )
 
+    # ---- Segmentation Legend: immediately below the main visualization ----
+    st.markdown(
+        f"""
+        <div class="section-title" style="font-size:1.05rem;margin-top:.4rem">Segmentation Legend</div>
+        <div class="section-sub" style="margin-bottom:.3rem">
+            The overlay highlights the predicted tumor sub-regions within the MRI volume.
+        </div>
+        {_legend_html()}
+        """,
+        unsafe_allow_html=True,
+    )
+
     if gt_crop is not None:
         st.markdown("<div class='section-gap'></div>", unsafe_allow_html=True)
         st.markdown(
             """
-            <div class="section-title">Ground Truth Comparison</div>
+            <div class="section-title">Prediction vs Ground Truth</div>
             <div class="section-sub">Model prediction against the expert-annotated ground truth, at the same slice.</div>
             """,
             unsafe_allow_html=True,
         )
-        v1, v2, v3 = st.columns(3)
-        with v1:
-            st.markdown(_img_card_html(_np_to_b64_png(inf.make_overlay(flair[s], np.zeros_like(pred[s]))), "MRI (FLAIR)"), unsafe_allow_html=True)
-        with v2:
-            st.markdown(_img_card_html(_np_to_b64_png(inf.make_overlay(flair[s], gt_crop[s])), "Ground Truth"), unsafe_allow_html=True)
-        with v3:
-            st.markdown(_img_card_html(_np_to_b64_png(inf.make_overlay(flair[s], pred[s])), "Model Prediction"), unsafe_allow_html=True)
+        gtv1, gtv2 = st.columns(2, gap="large")
+        with gtv1:
+            st.markdown(
+                _img_card_html(_np_to_b64_png(inf.make_overlay(flair[s], pred[s])), f"Axial slice {s}", tag="MODEL PREDICTION"),
+                unsafe_allow_html=True,
+            )
+        with gtv2:
+            st.markdown(
+                _img_card_html(_np_to_b64_png(inf.make_overlay(flair[s], gt_crop[s])), f"Axial slice {s}", tag="GROUND TRUTH"),
+                unsafe_allow_html=True,
+            )
         st.markdown(_legend_html(), unsafe_allow_html=True)
 
     with st.expander("ℹ️ How this works"):
