@@ -17,6 +17,7 @@ makes its boundary intrinsically ambiguous. This ordering is consistent with the
 qualitative example, where the core is the part most often under-segmented.
 
 \section{Failure cases}
+\label{sec:failure-cases}
 
 Two failure modes are worth noting. First, in slices with little or no tumour the
 model occasionally produces scattered false-positive voxels; this is characteristic
@@ -25,7 +26,32 @@ is reduced both by longer training and by the Dice term in the loss. Second, whe
 two tissue types have similar appearance --- for instance necrotic core against
 non-enhancing tumour, or edema against normal white-matter hyperintensity --- the
 model can mislabel one as the other. These are precisely the boundaries that also
-cause disagreement between human raters.
+cause disagreement between human raters. The worst validation case in
+Figure~\ref{fig:cases} (Dice 0.22) is a clear instance of the second mode: the
+model correctly localises the abnormal region via its edema but fails to resolve
+the internal necrotic core and enhancing tumour, collapsing what should be three
+distinct sub-regions into one.
+
+\section{Comparison with the original 2023 project}
+
+This work supersedes an earlier undergraduate project report on the same broad
+topic, submitted in 2023. That report trained a 2D classifier on 253 curated MRI
+images sorted only into ``tumour''/``no tumour'' folders, reporting an
+image-level classification accuracy of 90.4\% together with a confusion matrix
+whose reported counts were internally inconsistent, and without a clearly
+documented dataset provenance, train/validation protocol, or a segmentation
+evaluation metric beyond a handful of example masks. The present work differs
+in ways that matter for scientific validity rather than for the headline
+number alone: it trains and evaluates on the real, multi-institutional
+BraTS~2020 dataset rather than a small curated image set; it performs full 3D
+volumetric segmentation into four classes rather than binary image-level
+classification; it reports standard, reproducible overlap and boundary metrics
+(Dice, HD95) with a fixed, documented, seed-controlled train/validation split
+(Section~\ref{sec:data}); and it is accompanied by a public, working software
+artifact (Chapter~\ref{ch:conclusion}) rather than a static report alone. The
+two projects' headline numbers are consequently not comparable to one another,
+but the pipeline described here is markedly more rigorous, and every claim in
+it can be independently re-run and checked.
 
 \section{Limitations}
 
@@ -39,8 +65,10 @@ Several limitations should be stated plainly.
         set would be needed to make claims about clinical robustness.
   \item \textbf{Validation, not the official BraTS test protocol.} Results are
         reported on our own validation split, not through the official BraTS
-        online evaluation, so they are not directly comparable to challenge
-        leaderboard entries.
+        online evaluation portal or its held-out test set. Section~\ref{sec:literature-comparison}
+        computes the standard composite regions for a like-for-like comparison
+        with published numbers, but this remains an internal split rather than
+        the official challenge evaluation.
   \item \textbf{Fixed centre-crop.} Volumes are centre-cropped to a $128^3$ patch
         for memory reasons. For most subjects this comfortably contains the brain,
         but a tumour lying far from the centre could in principle be partly

@@ -13,9 +13,17 @@ Dice and cross-entropy loss and evaluated with both an overlap metric (Dice) and
 boundary metric (HD95). It reaches a foreground mean Dice of 0.71 on the held-out
 validation split, localising the tumour reliably and segmenting the edema and
 enhancing tumour well, with the expected drop in accuracy on the smaller and more
-ambiguous necrotic core. Just as important, the whole study is reproducible: fixed
-seeds, a deterministic split, a single configurable entry point and a notebook that
-runs the pipeline end to end on a single consumer GPU.
+ambiguous necrotic core. On the standard composite BraTS regions the model's
+whole-tumour Dice (0.88) sits within a few points of the top BraTS~2020
+challenge entries, despite training for only 34 epochs on a single 8~GB GPU.
+Just as important, the whole study is reproducible: fixed seeds, a
+deterministic split, a single configurable entry point and a notebook that
+runs the pipeline end to end on a single consumer GPU. The trained model is
+also deployed behind a public, interactive web application
+(\url{https://glioblastome-brain-tumor-detection.streamlit.app/}), where a user
+can select an example scan or upload their own and receive a tumour detection
+and segmentation result directly, turning the research pipeline into a usable
+tool rather than a static report.
 
 \section{Future work}
 
@@ -37,12 +45,12 @@ Chapter~\ref{ch:discussion}:
   \item \textbf{Uncertainty estimation.} Adding test-time dropout or ensembling
         would let the model express confidence in its predictions, which is
         valuable in a clinical decision-support setting.
-  \item \textbf{Deployment as a web application.} The trained model is intended to
-        be wrapped in a simple interactive application in which a user uploads a
-        brain scan and receives either a message that no tumour was detected or a
-        visualisation of the tumour's location and sub-regions overlaid on the
-        scan. This turns the research pipeline into a usable tool and is the
-        planned next stage of the project.
+  \item \textbf{Extending the deployed application.} The web application
+        described above currently requires all four modalities in BraTS-style
+        pre-processed form; supporting raw, non-registered clinical exports
+        would need automatic skull-stripping and co-registration added to the
+        upload path, making the tool usable directly on unprocessed scans
+        rather than only on research-format data.
 \end{itemize}
 
 Taken together, this work delivers a correct and honestly evaluated glioblastoma

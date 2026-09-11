@@ -92,3 +92,95 @@ core, blue: enhancing tumour). The prediction matches the ground truth closely
 across all three sub-regions.}
 \label{fig:overlay}
 \end{figure}
+
+\section{Per-subject variability}
+\label{sec:variability}
+
+The aggregate metrics in Table~\ref{tab:results} average over all 44 validation
+subjects, but segmentation difficulty varies substantially from case to case.
+Figure~\ref{fig:dice-dist} shows the distribution of per-subject foreground mean
+Dice: scores range from 0.22 to 0.94, with a mean of 0.71 (matching the aggregate
+in Table~\ref{tab:results}), a median of 0.76 and a standard deviation of 0.17.
+The necrotic/non-enhancing core has the widest spread and includes several
+subjects with near-zero Dice --- typically cases where the true core is very
+small or entirely absent, so a modest false positive or a missed detection
+dominates the ratio. Edema and enhancing tumour are comparatively stable across
+subjects, consistent with their higher aggregate Dice in Table~\ref{tab:results}.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.75\textwidth]{dice_distribution.png}
+\caption{Per-subject foreground Dice distribution across the 44 validation
+subjects, split by class. Box: interquartile range; orange line: median; green
+dashed line: mean; dots: individual subjects.}
+\label{fig:dice-dist}
+\end{figure}
+
+\section{Qualitative results across performance levels}
+
+Figure~\ref{fig:overlay} showed a single representative case. To give a fuller
+picture, Figure~\ref{fig:cases} shows the \emph{best}, \emph{typical} (median)
+and \emph{worst} validation subjects, selected by foreground mean Dice from the
+distribution in Figure~\ref{fig:dice-dist} rather than chosen by hand. In the
+best case (Dice 0.94, subject BraTS20\_Training\_192) the model recovers the
+classic concentric ring structure of glioblastoma --- necrotic core, enhancing
+rim, surrounding edema --- almost exactly. In the typical case (Dice 0.77,
+subject BraTS20\_Training\_013) the overall structure is correct with minor
+boundary disagreement. In the worst case (Dice 0.22, subject
+BraTS20\_Training\_141) the model detects the correct general location via the
+edema but fails to resolve the internal necrotic core and enhancing tumour at
+all, illustrating the sub-structure failure mode discussed further in
+Section~\ref{sec:failure-cases}.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.95\textwidth]{case_best.png}\\[4pt]
+\includegraphics[width=0.95\textwidth]{case_typical.png}\\[4pt]
+\includegraphics[width=0.95\textwidth]{case_worst.png}
+\caption{Best, typical and worst validation cases by foreground mean Dice
+(top to bottom), each showing MRI (FLAIR), ground truth and prediction at the
+subject's peak-tumour slice.}
+\label{fig:cases}
+\end{figure}
+
+\section{Comparison with published BraTS results}
+\label{sec:literature-comparison}
+
+The evaluation elsewhere in this chapter uses the three disjoint BraTS labels
+(necrotic/non-enhancing core, edema, enhancing tumour) defined in
+Section~\ref{sec:preproc}. The official BraTS challenge instead scores three
+overlapping composite regions: the whole tumour (WT, all abnormal tissue), the
+tumour core (TC, necrotic core plus enhancing tumour) and the enhancing tumour
+(ET) alone. To allow a direct, like-for-like comparison with published results,
+we additionally compute these composite regions from the same predictions.
+Table~\ref{tab:literature} places our result alongside the top two entries in
+the BraTS~2020 segmentation challenge.
+
+\begin{table}[t]
+\centering
+\caption{Composite-region Dice compared with the top two BraTS~2020 challenge
+entries. WT: whole tumour; TC: tumour core; ET: enhancing tumour.}
+\label{tab:literature}
+\begin{tabular}{@{}lccc@{}}
+\toprule
+Method & WT & TC & ET \\
+\midrule
+nnU-Net \citep{isensee2021nnunet} (1st place, test set)     & 0.890 & 0.851 & 0.820 \\
+H2NF-Net \citep{jia2020h2nfnet} (2nd place, validation set) & 0.913 & 0.855 & 0.788 \\
+\midrule
+This work (compact 3D~U-Net, validation split)              & 0.884 & 0.817 & 0.735 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The comparison should be read with its context in mind: the challenge entries
+are ensembles trained with extensive compute budgets, challenge-specific
+post-processing and, in nnU-Net's case, an automated pipeline-configuration
+search, whereas this model is a single, untuned 3D~U-Net trained for 34 epochs
+on one 8~GB consumer GPU. Even so, whole-tumour localisation (WT, 0.884) sits
+within a few points of both challenge entries, suggesting the model has
+learned to find the tumour reliably. The gap widens for the tumour core and,
+most visibly, the enhancing tumour (0.735 versus 0.79--0.82), which matches the
+disjoint-label finding in Table~\ref{tab:results} that the smaller, more
+detailed sub-regions are where this model has the most room to improve with
+additional training or capacity.

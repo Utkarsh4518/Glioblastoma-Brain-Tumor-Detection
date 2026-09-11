@@ -42,10 +42,14 @@ voxel-wise segmentation into background, necrotic/non-enhancing core, peritumora
 edema and enhancing tumour. The network is optimised with a combined Dice and
 cross-entropy loss and evaluated with the Dice similarity coefficient and the
 95th-percentile Hausdorff distance. On a held-out validation split the model
-attains a mean foreground Dice of 0.71 (edema 0.77, enhancing tumour 0.73,
-necrotic/non-enhancing core 0.61) and localises the tumour region reliably. We discuss the behaviour of the model across sub-regions,
-its failure cases and limitations, and outline a deployment path as an
-interactive web application for tumour detection and localisation.
+attains a mean foreground Dice of 0.71 $\pm$ 0.17 across subjects (edema 0.77,
+enhancing tumour 0.73, necrotic/non-enhancing core 0.61; per-subject range
+0.22--0.94) and localises the tumour reliably, reaching a whole-tumour overlap
+(Dice 0.88) competitive with top BraTS~2020 challenge entries despite a far
+smaller training budget. We discuss the behaviour of the model across
+sub-regions, its per-subject variability, failure cases and limitations, and
+describe a deployed interactive web application for tumour detection and
+localisation.
 \end{abstract}
 
 \tableofcontents
