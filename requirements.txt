@@ -10,3 +10,5 @@ nibabel>=5.0
 numpy>=1.26
 streamlit>=1.30
 Pillow>=10.0
+scikit-image>=0.22
+plotly>=5.20

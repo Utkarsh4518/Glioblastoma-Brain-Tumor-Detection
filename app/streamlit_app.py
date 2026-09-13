@@ -21,6 +21,7 @@ import tempfile
 from pathlib import Path
 
 import numpy as np
+import plotly.graph_objects as go
 import streamlit as st
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -28,6 +29,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from app import inference as inf  # noqa: E402
+from viz.mesh import extract_all_regions, wireframe_lines  # noqa: E402
 
 DEFAULT_CKPT = os.environ.get("BRATS_CHECKPOINT", inf.DEFAULT_CHECKPOINT)
 DEFAULT_DATA_ROOT = os.environ.get(
@@ -307,6 +309,59 @@ def _modality_preview_grid(volumes: list[np.ndarray]) -> None:
             )
 
 
+def _rgb_css(rgb: tuple[int, int, int]) -> str:
+    return f"rgb({rgb[0]},{rgb[1]},{rgb[2]})"
+
+
+def _mesh_figure(
+    meshes: dict, visible: dict[int, bool], opacity: float, wireframe_meshes: dict | None = None
+) -> go.Figure:
+    """
+    Build a Plotly figure with one Mesh3d trace per visible, non-empty region,
+    colored to match inf.CLASS_COLORS (the same colors used in the 2D overlay).
+
+    If `wireframe_meshes` is given, an additional thin bright-edge line trace
+    is drawn on top of each visible region's surface -- purely decorative; it
+    never replaces or alters the accurate coloured surface above.
+    """
+    fig = go.Figure()
+    for cls in (1, 2, 3):
+        md = meshes.get(cls)
+        if md is None or not visible.get(cls, True):
+            continue
+        x, y, z = md.vertices[:, 0], md.vertices[:, 1], md.vertices[:, 2]
+        i, j, k = md.faces[:, 0], md.faces[:, 1], md.faces[:, 2]
+        fig.add_trace(go.Mesh3d(
+            x=x, y=y, z=z, i=i, j=j, k=k,
+            color=_rgb_css(inf.CLASS_COLORS[cls]),
+            opacity=(opacity * 0.55) if wireframe_meshes else opacity,
+            name=inf.CLASS_NAMES[cls],
+            showlegend=True,
+            flatshading=False,
+            lighting=dict(ambient=0.55, diffuse=0.6, specular=0.15, roughness=0.6),
+            lightposition=dict(x=100, y=100, z=200),
+        ))
+        if wireframe_meshes and wireframe_meshes.get(cls) is not None:
+            wx, wy, wz = wireframe_lines(wireframe_meshes[cls])
+            fig.add_trace(go.Scatter3d(
+                x=wx, y=wy, z=wz, mode="lines",
+                line=dict(color=_rgb_css(inf.CLASS_COLORS[cls]), width=2.5),
+                opacity=0.95, showlegend=False, hoverinfo="skip",
+            ))
+    fig.update_layout(
+        scene=dict(
+            aspectmode="data",  # volume is 1mm isotropic -- keep true relative proportions
+            xaxis=dict(visible=False), yaxis=dict(visible=False), zaxis=dict(visible=False),
+            bgcolor="#0b1120",
+        ),
+        paper_bgcolor="#0b1120",
+        margin=dict(l=0, r=0, t=0, b=0),
+        legend=dict(font=dict(color="#e6edf3"), bgcolor="rgba(0,0,0,0)"),
+        height=520,
+    )
+    return fig
+
+
 # ============================================================================
 # 1. HERO
 # ============================================================================
@@ -554,7 +609,7 @@ with st.container(border=True):
 
     st.markdown("<div style='height:.4rem'></div>", unsafe_allow_html=True)
     analyze = st.button(
-        "🔍 Analyze Scan", type="primary", use_container_width=True, disabled=(volumes is None)
+        "🔍 Analyze Scan", type="primary", width="stretch", disabled=(volumes is None)
     )
     if volumes is None:
         st.caption("Select an example or upload a scan above to enable analysis.")
@@ -581,6 +636,20 @@ else:
 # ============================================================================
 # 6 & 7. RESULTS + GROUND TRUTH COMPARISON
 # ============================================================================
+# A plain `if analyze:` gate is not enough here: st.button() only returns True
+# on the single rerun immediately following its click. The results below
+# contain their own interactive widgets (the slice slider, the 2D/3D toggle,
+# per-region checkboxes, the opacity slider) -- moving ANY of them triggers a
+# fresh rerun in which `analyze` is False again, which would make the whole
+# section vanish. So: run inference once on a genuine click, persist the
+# result in session_state, and render from there on every subsequent rerun
+# as long as the currently-selected scan still matches what was analyzed.
+input_fingerprint = None
+if volumes is not None:
+    # Cheap fingerprint (avoids hashing full volumes): catches both "different
+    # example selected" and "different files uploaded under the same label".
+    input_fingerprint = (source_label, tuple(v.shape for v in volumes), float(np.sum(volumes[0])))
+
 if volumes is not None and analyze:
     with st.status("Analysis in progress", expanded=True) as status_box:
         st.write("Preparing volumetric MRI")
@@ -590,6 +659,23 @@ if volumes is not None and analyze:
         st.write("Generating segmentation")
         stats = inf.summarize(pred)
         status_box.update(label="Analysis complete", state="complete", expanded=False)
+    st.session_state["result"] = {
+        "image": image, "pred": pred, "stats": stats, "gt": gt,
+        "source_label": source_label, "fingerprint": input_fingerprint,
+    }
+
+_result = st.session_state.get("result")
+_show_results = (
+    _result is not None and input_fingerprint is not None
+    and _result["fingerprint"] == input_fingerprint
+)
+
+if _show_results:
+    image = _result["image"]
+    pred = _result["pred"]
+    stats = _result["stats"]
+    gt = _result["gt"]
+    source_label = _result["source_label"]
 
     # ---- input -> output connector, bridging the MRI preview above to the result below ----
     st.markdown(
@@ -625,14 +711,56 @@ if volumes is not None and analyze:
     else:
         default_slice = inf.best_tumor_slice(pred)
 
+    view_mode = st.segmented_control(
+        "Visualization",
+        ["🖼️ 2D Slice", "🧊 3D Mesh"],
+        default="🖼️ 2D Slice",
+        label_visibility="collapsed",
+    )
+
+    s = default_slice  # baseline; the 2D branch below lets the user move it via the slider,
+    # and the 3D branch has no slice concept but "Prediction vs Ground Truth" further down
+    # still needs a slice index regardless of which view is currently selected.
+
     res_left, res_right = st.columns([2.2, 1], gap="large")
     with res_left:
-        s = st.slider("Axial slice", 0, pred.shape[0] - 1, default_slice)
-        pred_panel = inf.make_overlay(flair[s], pred[s])
-        st.markdown(
-            _img_card_html(_np_to_b64_png(pred_panel), f"Axial slice {s}", tag="MODEL PREDICTION", hero=True),
-            unsafe_allow_html=True,
-        )
+        if view_mode == "🧊 3D Mesh":
+            if not stats["tumor_present"]:
+                st.markdown(
+                    "<div class='placeholder-panel'>No tumor sub-regions to render in 3D.</div>",
+                    unsafe_allow_html=True,
+                )
+            else:
+                meshes = extract_all_regions(pred)  # step_size=2 default; verified in viz/mesh.py
+                mc1, mc2, mc3, mc4 = st.columns(4)
+                visible = {
+                    3: mc1.checkbox("Enhancing tumour", value=True, key="show_et"),
+                    2: mc2.checkbox("Edema", value=True, key="show_ed"),
+                    1: mc3.checkbox("Necrotic core", value=True, key="show_ncr"),
+                }
+                opacity = mc4.slider("Opacity", 0.2, 1.0, 0.9, 0.05, key="mesh_opacity")
+                stylized = st.checkbox("✨ Stylized wireframe overlay", value=False, key="mesh_stylized")
+
+                wireframe_meshes = None
+                if stylized:
+                    # A separate, coarser extraction purely for the decorative edge
+                    # geometry -- keeps the wireframe visually light without touching
+                    # the accurate step_size=2 surface mesh drawn underneath it.
+                    wireframe_meshes = extract_all_regions(pred, step_sizes={1: 4, 2: 4, 3: 4})
+
+                st.markdown("<div class='img-tag' style='margin-bottom:6px'>MODEL PREDICTION — 3D MESH</div>", unsafe_allow_html=True)
+                with st.container(border=True):
+                    st.plotly_chart(
+                        _mesh_figure(meshes, visible, opacity, wireframe_meshes),
+                        config={"displaylogo": False},
+                    )
+        else:
+            s = st.slider("Axial slice", 0, pred.shape[0] - 1, default_slice)
+            pred_panel = inf.make_overlay(flair[s], pred[s])
+            st.markdown(
+                _img_card_html(_np_to_b64_png(pred_panel), f"Axial slice {s}", tag="MODEL PREDICTION", hero=True),
+                unsafe_allow_html=True,
+            )
 
     with res_right:
         if not stats["tumor_present"]:
